@@ -53,7 +53,89 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    @apply h-full;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    @apply min-h-full;
+    @apply leading-relaxed;
+  }
+  
+  /* Ensure proper spacing */
+  h1, h2, h3, h4, h5, h6 {
+    @apply leading-tight;
+  }
+  
+  /* Fix for compact buttons */
+  button {
+    @apply leading-normal;
+  }
+  
+  /* Fix for input spacing */
+  input, textarea, select {
+    @apply leading-normal;
+  }
+}
+
+@layer components {
+  /* Add proper spacing to cards */
+  .card {
+    @apply shadow-sm border bg-card text-card-foreground rounded-lg;
+  }
+  
+  /* Fix button heights */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium;
+    @apply ring-offset-background transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+    min-height: 40px; /* Ensure minimum height */
+  }
+  
+  /* Fix input heights */
+  .input {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2;
+    @apply text-sm ring-offset-background;
+    @apply file:border-0 file:bg-transparent file:text-sm file:font-medium;
+    @apply placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 40px; /* Ensure minimum height */
+  }
+}
+
+@layer utilities {
+  /* Line clamping utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  /* Ensure proper spacing */
+  .space-y-comfortable > * + * {
+    margin-top: 1.5rem;
+  }
+  
+  .space-y-loose > * + * {
+    margin-top: 2rem;
   }
 }

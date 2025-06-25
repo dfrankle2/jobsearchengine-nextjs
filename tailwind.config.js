@@ -70,6 +70,25 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // Add proper spacing scale
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+        '26': '6.5rem',
+        '30': '7.5rem',
+      },
+      // Add proper line heights
+      lineHeight: {
+        'extra-loose': '2.5',
+        '12': '3rem',
+      },
+      // Add minimum heights
+      minHeight: {
+        '12': '3rem',
+        '16': '4rem',
+        '20': '5rem',
+        '24': '6rem',
+      }
     },
   },
   plugins: [require("tailwindcss-animate")],

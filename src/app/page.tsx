@@ -83,60 +83,60 @@ const topLocations = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section with Gradient */}
-      <section className="relative overflow-hidden">
+    <div className="min-h-screen">
+      {/* Hero Section with Enhanced Spacing */}
+      <section className="relative overflow-hidden min-h-screen flex items-center">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600" />
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
           <div className="text-center">
-            <Badge className="mb-4 bg-white/20 text-white border-white/30 backdrop-blur-sm">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <Badge className="mb-8 bg-white/20 text-white border-white/30 backdrop-blur-sm px-4 py-2 text-base">
+              <Sparkles className="w-4 h-4 mr-2" />
               AI-Powered Job Search
             </Badge>
             
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight leading-tight">
               Find Your Dream Job
-              <span className="block text-3xl md:text-4xl mt-2 text-blue-100 font-normal">
+              <span className="block text-3xl md:text-4xl mt-4 text-blue-100 font-normal">
                 in seconds, not hours
               </span>
             </h1>
             
-            <p className="text-xl text-blue-100 mb-10 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-blue-100 mb-12 max-w-4xl mx-auto leading-relaxed">
               Our AI analyzes millions of job postings to find perfect matches based on 
               your skills, experience, and preferences. Join 50,000+ professionals who've 
               found their next opportunity here.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100 shadow-xl">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
+              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100 shadow-xl px-8 py-4 text-lg h-auto">
                 <Link href="/search" className="group">
-                  <Search className="mr-2 h-5 w-5" />
+                  <Search className="mr-3 h-6 w-6" />
                   Start Your Search
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
+              <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm px-8 py-4 text-lg h-auto">
                 <Link href="/dashboard">
-                  <Briefcase className="mr-2 h-5 w-5" />
+                  <Briefcase className="mr-3 h-6 w-6" />
                   View Saved Jobs
                 </Link>
               </Button>
             </div>
             
-            <div className="mt-12 flex items-center justify-center gap-8 text-white/80">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 fill-current" />
-                <span className="text-sm">4.9/5 Rating</span>
+            <div className="flex flex-wrap items-center justify-center gap-8 text-white/80">
+              <div className="flex items-center gap-3">
+                <Star className="w-6 h-6 fill-current" />
+                <span className="text-lg">4.9/5 Rating</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                <span className="text-sm">50K+ Users</span>
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6" />
+                <span className="text-lg">50K+ Users</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5" />
-                <span className="text-sm">1M+ Jobs</span>
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-6 h-6" />
+                <span className="text-lg">1M+ Jobs</span>
               </div>
             </div>
           </div>
@@ -144,30 +144,30 @@ export default function Home() {
       </section>
 
       {/* Popular Categories Section */}
-      <section className="py-20 -mt-16 relative z-10">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Explore Popular Categories
             </h2>
-            <p className="text-lg text-gray-600">
-              Discover opportunities in trending job categories
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Discover opportunities in trending job categories with thousands of active listings
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {popularCategories.map((category, index) => (
               <Card 
                 key={index} 
-                className="group hover:shadow-xl transition-all duration-300 cursor-pointer border-gray-200 overflow-hidden"
+                className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-gray-200 overflow-hidden hover:scale-105"
               >
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-lg`}>
-                      <category.icon className="w-6 h-6 text-white" />
+                <CardHeader className="pb-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-lg`}>
+                      <category.icon className="w-8 h-8 text-white" />
                     </div>
                     {category.trending && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 px-3 py-1">
                         <TrendingUp className="w-3 h-3 mr-1" />
                         Trending
                       </Badge>
@@ -175,16 +175,16 @@ export default function Home() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardTitle className="text-xl mb-2 group-hover:text-blue-600 transition-colors">
+                  <CardTitle className="text-xl mb-3 group-hover:text-blue-600 transition-colors">
                     {category.title}
                   </CardTitle>
-                  <CardDescription className="text-lg font-semibold text-gray-900 mb-3">
-                    {category.count} jobs
+                  <CardDescription className="text-lg font-semibold text-gray-900 mb-4">
+                    {category.count} active jobs
                   </CardDescription>
                   <Link href={`/search?query=${encodeURIComponent(category.query)}`}>
-                    <Button variant="ghost" className="w-full justify-between group-hover:bg-gray-50">
-                      Explore Jobs
-                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    <Button variant="ghost" className="w-full justify-between group-hover:bg-gray-50 h-12">
+                      Explore Opportunities
+                      <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </Link>
                 </CardContent>
@@ -195,36 +195,36 @@ export default function Home() {
       </section>
 
       {/* Top Locations Section */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Top Job Locations
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Top Job Markets
             </h2>
-            <p className="text-lg text-gray-600">
-              Find opportunities in the hottest job markets
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Find opportunities in the world's most vibrant job markets and remote-first companies
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {topLocations.map((location, index) => (
               <Link
                 key={index}
                 href={`/search?location=${encodeURIComponent(location.name)}`}
                 className="group"
               >
-                <Card className="hover:shadow-lg transition-all duration-300 hover:scale-105">
-                  <CardContent className="p-4 text-center">
-                    <MapPin className="w-6 h-6 mx-auto mb-2 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                <Card className="hover:shadow-xl transition-all duration-300 hover:scale-105 h-full">
+                  <CardContent className="p-6 text-center h-full flex flex-col justify-center">
+                    <MapPin className="w-8 h-8 mx-auto mb-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                    <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
                       {location.name}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-gray-600 mb-3">
                       {location.count} jobs
                     </p>
                     {location.hot && (
-                      <Badge className="mt-2 bg-orange-100 text-orange-700 border-orange-200">
-                        🔥 Hot
+                      <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">
+                        🔥 Hot Market
                       </Badge>
                     )}
                   </CardContent>
@@ -236,27 +236,27 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Why Professionals Choose Us
             </h2>
-            <p className="text-lg text-gray-600">
-              Advanced features that give you the edge in your job search
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Advanced features that give you the competitive edge in today's job market
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-2 hover:border-blue-500 transition-colors">
-              <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <Zap className="h-7 w-7 text-white" />
+          <div className="grid md:grid-cols-3 gap-12">
+            <Card className="border-2 hover:border-blue-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center pb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <Zap className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">AI-Powered Matching</CardTitle>
+                <CardTitle className="text-2xl mb-4">AI-Powered Matching</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-lg leading-relaxed">
                   Our advanced AI analyzes job descriptions and scores them based on 
                   your profile for perfect matches. Get personalized recommendations 
                   with match scores from 1-10.
@@ -264,15 +264,15 @@ export default function Home() {
               </CardContent>
             </Card>
             
-            <Card className="border-2 hover:border-blue-500 transition-colors">
-              <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <Rocket className="h-7 w-7 text-white" />
+            <Card className="border-2 hover:border-blue-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center pb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <Rocket className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">Real-Time Search</CardTitle>
+                <CardTitle className="text-2xl mb-4">Real-Time Search</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-lg leading-relaxed">
                   Search across LinkedIn, Indeed, Glassdoor, and 50+ job boards 
                   simultaneously. Find fresh opportunities posted within the last 
                   30 days with our neural search technology.
@@ -280,16 +280,16 @@ export default function Home() {
               </CardContent>
             </Card>
             
-            <Card className="border-2 hover:border-blue-500 transition-colors">
-              <CardHeader>
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 shadow-lg">
-                  <Award className="h-7 w-7 text-white" />
+            <Card className="border-2 hover:border-blue-500 transition-all duration-300 hover:shadow-xl">
+              <CardHeader className="text-center pb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+                  <Award className="h-10 w-10 text-white" />
                 </div>
-                <CardTitle className="text-xl">Smart Filtering</CardTitle>
+                <CardTitle className="text-2xl mb-4">Smart Insights</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600">
-                  Filter by salary, location, experience level, company size, and more. 
+                <p className="text-gray-600 text-lg leading-relaxed">
+                  Get salary benchmarks, trending skills analysis, and market insights. 
                   Our validation ensures you only see real job postings, not outdated 
                   or filled positions.
                 </p>
@@ -300,28 +300,21 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Land Your Dream Job?
+      <section className="py-24 bg-gradient-to-br from-blue-600 to-indigo-600 text-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-8">
+            Ready to Accelerate Your Career?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 leading-relaxed">
-            Join thousands of professionals who've accelerated their careers. 
-            Start your AI-powered job search today and find opportunities you won't see anywhere else.
+          <p className="text-xl md:text-2xl text-blue-100 mb-12 leading-relaxed max-w-3xl mx-auto">
+            Join thousands of professionals who've found their dream jobs through 
+            our AI-powered platform. Start your journey today.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100 shadow-xl">
-              <Link href="/search" className="group">
-                Get Started Free
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white/30 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
-              <Link href="/dashboard">
-                View Demo
-              </Link>
-            </Button>
-          </div>
+          <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100 shadow-xl px-10 py-5 text-xl h-auto">
+            <Link href="/search" className="group">
+              Get Started Now
+              <ArrowRight className="ml-3 h-6 w-6 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
         </div>
       </section>
     </div>
