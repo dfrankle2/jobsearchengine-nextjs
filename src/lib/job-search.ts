@@ -40,8 +40,9 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
 
-  // Use auto type for intelligent routing between neural and keyword search
-  const jobSearch = await getExaClient().searchAndContents(query, {
+  try {
+    // Use auto type for intelligent routing between neural and keyword search
+    const jobSearch = await getExaClient().searchAndContents(query, {
     type: 'auto', // Let Exa decide between neural and keyword
     numResults,
     text: { 
@@ -63,23 +64,23 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
       'lever.co', 'greenhouse.io', 'workable.com',
       'icims.com', 'myworkdayjobs.com'
     ],
-    excludeDomains: [
-      'medium.com', 'wordpress.com', 'blogger.com',
-      'reddit.com', 'quora.com', 'facebook.com',
-      'news.ycombinator.com'
-    ],
+    // Note: Cannot use excludeDomains when getting content
     startPublishedDate: startDate.toISOString(),
     endPublishedDate: endDate.toISOString(),
-    excludeText: ['expired', 'filled', 'no longer accepting'],
+    excludeText: ['position has been filled'], // Only 1 phrase allowed
     useAutoprompt: true // Optimize query automatically
   });
 
-  return jobSearch.results.map(result => ({
-    url: result.url,
-    title: result.title || 'Untitled Job',
-    content: result.text || '',
-    score: undefined
-  }));
+    return jobSearch.results.map(result => ({
+      url: result.url,
+      title: result.title || 'Untitled Job',
+      content: result.text || '',
+      score: undefined
+    }));
+  } catch (error) {
+    console.error('Exa search error:', error);
+    throw new Error(`Failed to search jobs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 export async function findSimilarJobs(jobUrl: string, numResults: number = 10): Promise<JobSearchResult[]> {
@@ -108,13 +109,10 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
         'lever.co', 'greenhouse.io', 'workable.com',
         'icims.com', 'myworkdayjobs.com'
       ],
-      excludeDomains: [
-        'medium.com', 'wordpress.com', 'blogger.com',
-        'reddit.com', 'quora.com', 'facebook.com'
-      ],
+      // Note: Cannot use excludeDomains when getting content
       startPublishedDate: startDate.toISOString(),
       endPublishedDate: endDate.toISOString(),
-      excludeText: ['expired', 'filled', 'no longer accepting']
+      excludeText: ['position has been filled'] // Only 1 phrase allowed
     });
 
     return similarJobs.results.map(result => ({
