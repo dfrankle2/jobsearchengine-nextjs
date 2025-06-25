@@ -41,58 +41,70 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
   startDate.setDate(startDate.getDate() - 30);
 
   try {
-    // Build multiple targeted search queries
-    const searchQueries = [
-      `"${query}" job opening apply now hiring`,
-      `"${query}" position career opportunity`,
-      `${query} jobs available hiring immediately`
+    // Dual search strategy for better coverage
+    const searches = [
+      // Neural search for semantic understanding
+      {
+        query: `${query} job opening hiring now apply position career opportunity`,
+        type: 'neural' as const,
+        useAutoprompt: true
+      },
+      // Keyword search for exact matches
+      {
+        query: `"${query}" AND (job OR position OR hiring OR career)`,
+        type: 'keyword' as const,
+        useAutoprompt: false
+      }
     ];
 
     let allResults: JobSearchResult[] = [];
 
-    // Try multiple search strategies
-    for (const searchQuery of searchQueries.slice(0, 2)) {
+    for (const searchConfig of searches) {
       try {
-        console.log(`Searching with query: ${searchQuery}`);
+        console.log(`🔍 Searching with ${searchConfig.type}: ${searchConfig.query}`);
         
-        const jobSearch = await getExaClient().searchAndContents(searchQuery, {
-          type: 'neural',
+        const jobSearch = await getExaClient().searchAndContents(searchConfig.query, {
+          type: searchConfig.type,
           numResults: Math.ceil(numResults / 2),
           text: { 
             includeHtmlTags: false,
-            maxCharacters: 4000
+            maxCharacters: 5000 // More content for better analysis
           },
           highlights: {
-            query: 'job requirements qualifications responsibilities experience salary',
-            numSentences: 3,
-            highlightsPerUrl: 2
+            query: 'requirements qualifications responsibilities salary benefits experience skills',
+            numSentences: 4,
+            highlightsPerUrl: 3
           },
-          // CORRECTED: Use only base domains (no paths)
+          // Job-focused domains only
           includeDomains: [
-            // Major job boards
+            // Tier 1 - Major job boards
             'linkedin.com', 
             'indeed.com',
             'glassdoor.com',
+            
+            // Tier 2 - Established job sites
             'monster.com',
             'dice.com',
             'ziprecruiter.com',
             'careerbuilder.com',
             'simplyhired.com',
             
-            // Tech-focused job boards
+            // Tech & startup focused
             'stackoverflow.com',
             'angel.co',
             'wellfound.com',
             'hired.com',
             'otta.com',
+            'builtin.com',
             
-            // Remote-specific
+            // Remote job boards
             'remote.co',
             'flexjobs.com',
             'weworkremotely.com',
             'remoteok.io',
+            'remotejobs.com',
             
-            // ATS platforms
+            // ATS & recruiting platforms
             'lever.co',
             'greenhouse.io',
             'workable.com',
@@ -101,22 +113,18 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
             'myworkdayjobs.com',
             'icims.com',
             'taleo.net',
+            'jobvite.com',
+            'breezy.hr',
             
-            // Company career sites (base domains only)
-            'google.com',
-            'amazon.com',
-            'microsoft.com',
-            'apple.com',
-            'meta.com',
-            'netflix.com',
-            'salesforce.com',
-            'adobe.com',
-            'airbnb.com',
-            'uber.com',
-            'stripe.com',
-            'shopify.com'
+            // Direct company career pages
+            'careers.google.com',
+            'amazon.jobs',
+            'careers.microsoft.com',
+            'jobs.apple.com',
+            'metacareers.com',
+            'careers.salesforce.com'
           ],
-          // Exclude non-job content domains
+          // Exclude non-job content
           excludeDomains: [
             'medium.com',
             'wordpress.com', 
@@ -127,45 +135,52 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
             'twitter.com',
             'instagram.com',
             'youtube.com',
+            'wikipedia.org',
             'news.ycombinator.com',
             'techcrunch.com',
             'forbes.com',
-            'wikipedia.org'
+            'businessinsider.com',
+            'cnbc.com',
+            'wsj.com',
+            'nytimes.com'
           ],
-          // CORRECTED: Only 1 string, up to 5 words for includeText
-          includeText: ["job apply position"],
+          // Focus on job-related content
+          includeText: ["apply now hiring"],
           
-          // CORRECTED: Only 1 string, up to 5 words for excludeText  
-          excludeText: ["expired filled closed"],
+          // Exclude filled positions
+          excludeText: ["no longer available"],
           
           startPublishedDate: startDate.toISOString(),
           endPublishedDate: endDate.toISOString(),
-          useAutoprompt: true
+          useAutoprompt: searchConfig.useAutoprompt
         });
 
-        console.log(`Found ${jobSearch.results.length} results for query: ${searchQuery}`);
+        console.log(`✅ Found ${jobSearch.results.length} results`);
 
-        const results = jobSearch.results
+        // Enhanced validation and scoring
+        const validResults = jobSearch.results
           .filter(result => isValidJobPosting(result))
           .map(result => ({
             url: result.url,
             title: result.title || 'Untitled Job',
             content: result.text || '',
-            score: undefined
+            score: calculateInitialScore(result, query)
           }));
 
-        allResults = allResults.concat(results);
+        allResults = allResults.concat(validResults);
       } catch (error) {
-        console.error(`Search failed for query: ${searchQuery}`, error);
+        console.error(`Search failed for ${searchConfig.type}:`, error);
       }
     }
 
-    // Remove duplicates by URL
-    const uniqueResults = allResults.filter((job, index, self) => 
-      index === self.findIndex(j => j.url === job.url)
-    );
+    // Remove duplicates and sort by initial score
+    const uniqueResults = allResults
+      .filter((job, index, self) => 
+        index === self.findIndex(j => j.url === job.url)
+      )
+      .sort((a, b) => (b.score || 0) - (a.score || 0));
 
-    console.log(`Total unique results: ${uniqueResults.length}`);
+    console.log(`📊 Total unique valid results: ${uniqueResults.length}`);
     return uniqueResults.slice(0, numResults);
 
   } catch (error) {
@@ -174,47 +189,101 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
   }
 }
 
-// Helper function to validate if a result is actually a job posting
+// Enhanced validation with multiple criteria
 function isValidJobPosting(result: any): boolean {
   const title = (result.title || '').toLowerCase();
   const content = (result.text || '').toLowerCase();
   const url = (result.url || '').toLowerCase();
 
-  // Must contain job-related indicators
-  const jobIndicators = [
-    'job', 'position', 'role', 'career', 'hiring', 'employment', 
-    'opportunity', 'opening', 'vacancy', 'apply', 'candidate'
+  // URL patterns that indicate job postings
+  const jobUrlPatterns = [
+    '/jobs/', '/careers/', '/job/', '/career/', '/position/', 
+    '/opening/', '/vacancy/', 'job-', 'career-', '-job', '-career',
+    'jobid=', 'job_id=', 'requisition', 'posting'
   ];
   
-  const hasJobIndicator = jobIndicators.some(indicator => 
-    title.includes(indicator) || content.includes(indicator) || url.includes(indicator)
+  const hasJobUrl = jobUrlPatterns.some(pattern => url.includes(pattern));
+
+  // Strong job indicators in title
+  const titleJobIndicators = [
+    'hiring', 'job', 'position', 'role', 'opening', 
+    'opportunity', 'career', 'vacancy', 'wanted', 'seeking'
+  ];
+  
+  const hasTitleIndicator = titleJobIndicators.some(indicator => 
+    title.includes(indicator)
   );
 
-  // Must NOT be these types of pages
+  // Content must have job-specific sections
+  const requiredSections = [
+    ['responsibilit', 'duties', 'role', 'what you', 'you will'],
+    ['requirement', 'qualification', 'skill', 'experience', 'must have'],
+    ['benefit', 'offer', 'perks', 'salary', 'compensation']
+  ];
+  
+  const sectionsFound = requiredSections.filter(sectionGroup => 
+    sectionGroup.some(term => content.includes(term))
+  ).length;
+
+  // Exclude non-job pages
   const excludePatterns = [
-    'company profile', 'about us', 'store location', 'contact',
-    'press', 'news', 'blog', 'article', 'podcast', 'watch',
-    'stream', 'netflix', 'apple store', 'store hours'
+    'company overview', 'about us page', 'store location', 
+    'press release', 'news article', 'blog post', 'case study',
+    'product page', 'service page', 'contact us', 'privacy policy',
+    'terms of service', 'cookie policy'
   ];
 
   const isExcluded = excludePatterns.some(pattern => 
-    title.includes(pattern) || content.includes(pattern)
+    title.includes(pattern) || content.substring(0, 500).includes(pattern)
   );
 
-  // Must have substantial content (real job descriptions are detailed)
-  const hasSubstantialContent = content.length > 200;
-
-  // Check for job-specific content patterns
-  const jobContentPatterns = [
-    'responsibilities', 'requirements', 'qualifications', 'experience',
-    'skills', 'salary', 'benefits', 'full-time', 'part-time', 'remote'
+  // Content quality checks
+  const hasSubstantialContent = content.length > 500;
+  const hasApplyInstructions = content.includes('apply') || content.includes('application');
+  
+  // Multiple validation criteria (need at least 3)
+  const criteria = [
+    hasJobUrl,
+    hasTitleIndicator,
+    sectionsFound >= 2,
+    !isExcluded,
+    hasSubstantialContent,
+    hasApplyInstructions
   ];
+  
+  const criteriaMetCount = criteria.filter(c => c).length;
+  
+  return criteriaMetCount >= 3;
+}
 
-  const hasJobContent = jobContentPatterns.some(pattern => 
-    content.includes(pattern)
-  );
-
-  return hasJobIndicator && !isExcluded && hasSubstantialContent && hasJobContent;
+// Calculate initial relevance score based on content quality
+function calculateInitialScore(result: any, query: string): number {
+  const title = (result.title || '').toLowerCase();
+  const content = (result.text || '').toLowerCase();
+  const queryLower = query.toLowerCase();
+  
+  let score = 5; // Base score
+  
+  // Title relevance
+  if (title.includes(queryLower)) score += 2;
+  
+  // Content depth
+  if (content.length > 2000) score += 1;
+  if (content.length > 4000) score += 1;
+  
+  // Job quality indicators
+  const qualityIndicators = [
+    'salary', 'benefits', 'remote', 'hybrid', 
+    'equity', 'bonus', 'pto', 'vacation'
+  ];
+  
+  const qualityCount = qualityIndicators.filter(ind => 
+    content.includes(ind)
+  ).length;
+  
+  if (qualityCount >= 3) score += 1;
+  
+  return Math.min(10, score);
 }
 
 export async function findSimilarJobs(jobUrl: string, numResults: number = 10): Promise<JobSearchResult[]> {
@@ -224,13 +293,13 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
       excludeSourceDomain: true,
       text: { 
         includeHtmlTags: false,
-        maxCharacters: 3000
+        maxCharacters: 4000
       },
       highlights: {
-        query: 'job requirements qualifications experience',
-        numSentences: 2
+        query: 'requirements qualifications responsibilities salary',
+        numSentences: 3
       },
-      // Same focused domain list as search
+      // Focused domain list for quality
       includeDomains: [
         'linkedin.com', 
         'indeed.com',
@@ -238,17 +307,14 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
         'monster.com',
         'dice.com',
         'ziprecruiter.com',
-        'careerbuilder.com',
-        'stackoverflow.com',
         'angel.co',
         'wellfound.com',
         'lever.co',
         'greenhouse.io',
         'workable.com',
-        'icims.com'
+        'builtin.com'
       ],
-      // CORRECTED: Only 1 string, up to 5 words
-      excludeText: ["expired filled"]
+      excludeText: ["no longer available"]
     });
 
     return similarJobs.results
@@ -257,7 +323,7 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
         url: result.url,
         title: result.title || 'Untitled Job',
         content: result.text || '',
-        score: undefined
+        score: calculateInitialScore(result, '')
       }));
   } catch (error) {
     console.error('Error finding similar jobs:', error);
@@ -272,7 +338,7 @@ async function getOpenAIResponse(prompt: string): Promise<string> {
     const completion = await getOpenAIClient().chat.completions.create({
       model: 'o4-mini-2025-04-16',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'system', content: 'You are a helpful assistant that extracts information from job postings. Be concise and accurate.' },
         { role: 'user', content: prompt }
       ],
       temperature: 0,
@@ -314,42 +380,44 @@ export async function calculateJobScore(
   },
   preferences: UserPreferences
 ): Promise<number> {
-  const prompt = `Rate how well this job matches the user's preferences on a scale of 1-10.
+  // Start with initial content-based score
+  let baseScore = job.score || 5;
+  
+  // Preference matching
+  const prompt = `Based on the following job and user preferences, adjust the score.
+Current base score: ${baseScore}/10
 
 Job Details:
+- Title: ${job.title}
 - Company: ${job.company}
 - Location: ${job.location}
 - Salary: ${job.salary || 'Not specified'}
-- Experience Level: ${job.experienceLevel || 'Not specified'}
-- Job Type: ${job.jobType || 'Not specified'}
+- Experience: ${job.experienceLevel || 'Not specified'}
+- Type: ${job.jobType || 'Not specified'}
 - Skills: ${job.skills || 'Not specified'}
 
 User Preferences:
-- Preferred Location: ${preferences.location || 'Any'}
-- Preferred Job Type: ${preferences.jobType || 'Any'}
-- Experience Level: ${preferences.experienceLevel || 'Any'}
-- Desired Salary: ${preferences.salary || 'Any'}
+- Location: ${preferences.location || 'Any'}
+- Job Type: ${preferences.jobType || 'Any'}
+- Experience: ${preferences.experienceLevel || 'Any'}
+- Salary: ${preferences.salary || 'Any'}
 - Technologies: ${preferences.technologies || 'Any'}
 - Company Size: ${preferences.companySize || 'Any'}
 
-Job Description:
-${job.content.substring(0, 2000)}
-
-Rate this match from 1-10 where:
-- 10 = Perfect match
-- 7-9 = Strong match
-- 4-6 = Moderate match
-- 1-3 = Poor match
+Adjust the score based on how well the job matches preferences:
+- Add points for exact matches
+- Subtract points for mismatches
+- Consider "Remote" as matching any location preference
 
 Return ONLY a number from 1 to 10.`;
 
   try {
     const response = await getOpenAIResponse(prompt);
     const score = parseInt(response.trim());
-    return isNaN(score) ? 5 : Math.min(10, Math.max(1, score));
+    return isNaN(score) ? baseScore : Math.min(10, Math.max(1, score));
   } catch (error) {
     console.error('Error calculating score:', error);
-    return 5;
+    return baseScore;
   }
 }
 
