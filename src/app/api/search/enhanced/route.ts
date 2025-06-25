@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { enhancedJobSearch, findSimilarJobsEnhanced } from '@/lib/enhanced-job-search';
+import { enhancedJobSearch, findSimilarJobsEnhanced } from '@/lib/enhanced-job-search-fixed';
 import { prisma } from '@/lib/database';
 import { SearchFormData } from '@/types';
 
