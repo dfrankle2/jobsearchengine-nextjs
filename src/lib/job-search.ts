@@ -8,20 +8,22 @@ let openai: OpenAI | null = null;
 
 function getExaClient(): Exa {
   if (!exa) {
-    if (!process.env.EXA_API_KEY) {
+    const apiKey = process.env.EXA_API_KEY;
+    if (!apiKey) {
       throw new Error('EXA_API_KEY environment variable is not set');
     }
-    exa = new Exa(process.env.EXA_API_KEY);
+    exa = new Exa(apiKey);
   }
   return exa;
 }
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is not set');
     }
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    openai = new OpenAI({ apiKey });
   }
   return openai;
 }
