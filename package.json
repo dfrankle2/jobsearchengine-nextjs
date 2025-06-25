@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate --no-engine && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma db push && next build"
+    "postinstall": "prisma generate --no-engine",
+    "vercel-build": "prisma generate --no-engine && next build"
   },
   "dependencies": {
     "next": "^14.0.0",

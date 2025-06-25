@@ -6,6 +6,13 @@ import { SearchFormData } from '@/types';
 export async function POST(request: NextRequest) {
   try {
     const body: SearchFormData = await request.json();
+    
+    // Log environment variables status (without exposing values)
+    console.log('Environment check:', {
+      hasExa: !!process.env.EXA_API_KEY,
+      hasOpenAI: !!process.env.OPENAI_API_KEY,
+      hasDB: !!process.env.DATABASE_URL,
+    });
     const { 
       query, 
       location, 
@@ -111,9 +118,20 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json(
-      { error: 'Failed to search jobs' },
-      { status: 500 }
-    );
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = {
+      error: 'Failed to search jobs',
+      message: errorMessage,
+      // Include environment status for debugging
+      env: {
+        hasExa: !!process.env.EXA_API_KEY,
+        hasOpenAI: !!process.env.OPENAI_API_KEY,
+        hasDB: !!process.env.DATABASE_URL,
+      }
+    };
+    
+    return NextResponse.json(errorDetails, { status: 500 });
   }
 }

@@ -1,11 +1,4 @@
 {
-  "buildCommand": "prisma generate && next build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "installCommand": "npm install",
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "EXA_API_KEY": "@exa_api_key",
-    "OPENAI_API_KEY": "@openai_api_key"
-  }
+  "buildCommand": "npm run vercel-build",
+  "framework": "nextjs"
 }
