@@ -54,16 +54,13 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
         numSentences: 5 // More context
       },
       includeDomains: [
-        // Direct company career pages
-        'careers.google.com', 'amazon.jobs', 'careers.microsoft.com',
-        'jobs.apple.com', 'careers.meta.com', 'careers.netflix.com',
-        
-        // Major job boards
-        'linkedin.com/jobs', 'indeed.com', 'glassdoor.com',
+        // Major job boards (base domains only)
+        'linkedin.com', 'indeed.com', 'glassdoor.com',
         'dice.com', 'ziprecruiter.com', 'monster.com',
+        'careerbuilder.com', 'simplyhired.com',
         
-        // Tech-focused
-        'jobs.stackoverflow.com', 'angel.co', 'wellfound.com',
+        // Tech-focused (base domains)
+        'stackoverflow.com', 'angel.co', 'wellfound.com',
         'hired.com', 'triplebyte.com', 'otta.com',
         
         // Remote-specific
@@ -72,8 +69,12 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
         
         // ATS platforms
         'lever.co', 'greenhouse.io', 'workable.com',
-        'ashbyhq.com', 'jobs.smartrecruiters.com',
-        'myworkdayjobs.com', 'icims.com', 'taleo.net'
+        'ashbyhq.com', 'smartrecruiters.com',
+        'myworkdayjobs.com', 'icims.com', 'taleo.net',
+        
+        // Company career sites (base domains)
+        'google.com', 'amazon.jobs', 'microsoft.com',
+        'apple.com', 'meta.com', 'netflix.com'
       ],
       startPublishedDate: startDate.toISOString(),
       endPublishedDate: endDate.toISOString(),
@@ -119,11 +120,18 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
         numSentences: 3
       },
       includeDomains: [
-        // Same comprehensive list as search
-        'linkedin.com', 'indeed.com', 'glassdoor.com', 'monster.com',
-        'dice.com', 'ziprecruiter.com', 'careerbuilder.com',
+        // Major job boards (base domains only)
+        'linkedin.com', 'indeed.com', 'glassdoor.com',
+        'dice.com', 'ziprecruiter.com', 'monster.com',
+        'careerbuilder.com', 'simplyhired.com',
+        
+        // Tech-focused
         'stackoverflow.com', 'angel.co', 'wellfound.com',
+        
+        // Remote-specific
         'remote.co', 'flexjobs.com',
+        
+        // ATS platforms
         'lever.co', 'greenhouse.io', 'workable.com',
         'icims.com', 'myworkdayjobs.com'
       ],
