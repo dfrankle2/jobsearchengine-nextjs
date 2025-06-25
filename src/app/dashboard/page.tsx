@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SavedJob, Search } from '@/types';
+import { SavedJob } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +11,6 @@ import { BarChart3, Briefcase, Clock, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
-  const [recentSearches, setRecentSearches] = useState<Search[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,27 +28,7 @@ export default function DashboardPage() {
         setSavedJobs(savedJobsData);
       }
 
-      // Fetch recent searches
-      const searchesResponse = await fetch('/api/jobs?limit=5');
-      if (searchesResponse.ok) {
-        const searchesData = await searchesResponse.json();
-        // Group by search ID to get unique searches
-        const uniqueSearches = searchesData.reduce((acc: any[], job: any) => {
-          if (!acc.find(s => s.id === job.searchId)) {
-            acc.push({
-              id: job.searchId,
-              query: job.search?.query || 'Unknown search',
-              createdAt: job.createdAt,
-              jobCount: 1
-            });
-          } else {
-            const search = acc.find(s => s.id === job.searchId);
-            search.jobCount++;
-          }
-          return acc;
-        }, []);
-        setRecentSearches(uniqueSearches.slice(0, 5));
-      }
+      // TODO: Implement proper search history endpoint
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -229,33 +208,14 @@ export default function DashboardPage() {
 
         <TabsContent value="recent" className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Recent Searches</h2>
-          {recentSearches.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-gray-600">No recent searches. Start searching for jobs!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {recentSearches.map((search) => (
-                <Card key={search.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{search.query}</CardTitle>
-                    <CardDescription>
-                      {new Date(search.createdAt).toLocaleDateString()} • {search.jobCount} jobs found
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button asChild variant="outline" size="sm">
-                      <a href={`/search?query=${encodeURIComponent(search.query)}`}>
-                        Search Again
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <Card>
+            <CardContent className="text-center py-8">
+              <p className="text-gray-600">Search history coming soon!</p>
+              <Button asChild className="mt-4">
+                <a href="/search">Start New Search</a>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
