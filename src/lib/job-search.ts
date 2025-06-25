@@ -35,26 +35,43 @@ interface JobSearchResult {
   score?: number;
 }
 
-export async function searchJobsByQuery(query: string, numResults: number = 10): Promise<JobSearchResult[]> {
+export async function searchJobsByQuery(query: string, numResults: number = 25): Promise<JobSearchResult[]> {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
 
-  const searchQuery = `"${query}" "apply now" OR "apply today" job opening position`;
-  
-  const jobSearch = await getExaClient().searchAndContents(searchQuery, {
-    type: 'neural',
+  // Use auto type for intelligent routing between neural and keyword search
+  const jobSearch = await getExaClient().searchAndContents(query, {
+    type: 'auto', // Let Exa decide between neural and keyword
     numResults,
-    text: { includeHtmlTags: false },
+    text: { 
+      includeHtmlTags: false,
+      maxCharacters: 4000 // Optimize content extraction
+    },
+    highlights: {
+      query: 'requirements qualifications responsibilities salary benefits',
+      numSentences: 3
+    },
     includeDomains: [
-      'linkedin.com', 'indeed.com', 'glassdoor.com',
-      'angel.co', 'wellfound.com', 'lever.co',
-      'greenhouse.io', 'workday.com', 'google.com',
-      'apple.com', 'microsoft.com'
+      // Major job boards
+      'linkedin.com', 'indeed.com', 'glassdoor.com', 'monster.com',
+      'dice.com', 'ziprecruiter.com', 'careerbuilder.com',
+      // Specialized platforms
+      'stackoverflow.com', 'angel.co', 'wellfound.com',
+      'remote.co', 'flexjobs.com',
+      // ATS platforms
+      'lever.co', 'greenhouse.io', 'workable.com',
+      'icims.com', 'myworkdayjobs.com'
+    ],
+    excludeDomains: [
+      'medium.com', 'wordpress.com', 'blogger.com',
+      'reddit.com', 'quora.com', 'facebook.com',
+      'news.ycombinator.com'
     ],
     startPublishedDate: startDate.toISOString(),
     endPublishedDate: endDate.toISOString(),
-    excludeText: ['position has been filled']
+    excludeText: ['expired', 'filled', 'no longer accepting'],
+    useAutoprompt: true // Optimize query automatically
   });
 
   return jobSearch.results.map(result => ({
@@ -65,7 +82,7 @@ export async function searchJobsByQuery(query: string, numResults: number = 10):
   }));
 }
 
-export async function findSimilarJobs(jobUrl: string, numResults: number = 5): Promise<JobSearchResult[]> {
+export async function findSimilarJobs(jobUrl: string, numResults: number = 10): Promise<JobSearchResult[]> {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
@@ -73,15 +90,31 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 5): P
   try {
     const similarJobs = await getExaClient().findSimilarAndContents(jobUrl, {
       numResults,
-      text: { includeHtmlTags: false },
+      excludeSourceDomain: true, // Avoid duplicate listings
+      text: { 
+        includeHtmlTags: false,
+        maxCharacters: 3000
+      },
+      highlights: {
+        query: 'job requirements qualifications',
+        numSentences: 3
+      },
       includeDomains: [
-        'linkedin.com', 'indeed.com', 'glassdoor.com',
-        'angel.co', 'wellfound.com', 'lever.co',
-        'greenhouse.io', 'workday.com'
+        // Same comprehensive list as search
+        'linkedin.com', 'indeed.com', 'glassdoor.com', 'monster.com',
+        'dice.com', 'ziprecruiter.com', 'careerbuilder.com',
+        'stackoverflow.com', 'angel.co', 'wellfound.com',
+        'remote.co', 'flexjobs.com',
+        'lever.co', 'greenhouse.io', 'workable.com',
+        'icims.com', 'myworkdayjobs.com'
+      ],
+      excludeDomains: [
+        'medium.com', 'wordpress.com', 'blogger.com',
+        'reddit.com', 'quora.com', 'facebook.com'
       ],
       startPublishedDate: startDate.toISOString(),
       endPublishedDate: endDate.toISOString(),
-      excludeText: ['position has been filled']
+      excludeText: ['expired', 'filled', 'no longer accepting']
     });
 
     return similarJobs.results.map(result => ({

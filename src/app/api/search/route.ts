@@ -25,9 +25,32 @@ export async function POST(request: NextRequest) {
       findSimilar = true 
     } = body;
 
+    // Build optimized search query
+    let searchQuery = query;
+    
+    // Add location context if provided
+    if (location) {
+      searchQuery += ` in ${location}`;
+    }
+    
+    // Add job type if specified
+    if (jobType) {
+      searchQuery += ` ${jobType}`;
+    }
+    
+    // Add experience level if specified
+    if (experienceLevel) {
+      searchQuery += ` ${experienceLevel}`;
+    }
+    
+    // Add technologies/skills if specified
+    if (technologies) {
+      searchQuery += ` ${technologies}`;
+    }
+    
     // Search for jobs
-    console.log(`🔍 Searching for: ${query}`);
-    const jobs = await searchJobsByQuery(query, numResults);
+    console.log(`🔍 Searching for: ${searchQuery}`);
+    const jobs = await searchJobsByQuery(searchQuery, numResults);
     console.log(`Found ${jobs.length} initial job postings`);
 
     // Create search record
