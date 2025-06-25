@@ -120,8 +120,17 @@ export async function POST(request: NextRequest) {
           return await enrichJobData(job, userPreferences);
         } catch (error) {
           console.error('Error processing job:', error);
-          // Return job with default score on error
-          return { ...job, score: 5, company: 'Unknown', location: 'Unknown' };
+          // Return job with default values on error
+          return { 
+            ...job, 
+            score: 5, 
+            company: 'Unknown', 
+            location: 'Unknown',
+            salary: 'Not specified',
+            experienceLevel: 'Not specified',
+            jobType: 'Not specified',
+            skills: ''
+          };
         }
       });
       

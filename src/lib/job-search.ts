@@ -77,9 +77,8 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
       ],
       startPublishedDate: startDate.toISOString(),
       endPublishedDate: endDate.toISOString(),
-      excludeText: 'This position has been filled', // More specific
-      useAutoprompt: true, // Optimize query automatically
-      category: 'job listing' // Help Exa understand context
+      excludeText: ['This position has been filled'], // Limited to 1 phrase
+      useAutoprompt: true // Optimize query automatically
     });
 
     // Filter out likely filled positions
@@ -131,7 +130,7 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 10): 
       // Note: Cannot use excludeDomains when getting content
       startPublishedDate: startDate.toISOString(),
       endPublishedDate: endDate.toISOString(),
-      excludeText: ['position has been filled'] // Only 1 phrase allowed
+      excludeText: ['This position has been filled'] // Limited to 1 phrase
     });
 
     return similarJobs.results.map(result => ({
