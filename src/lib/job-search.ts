@@ -101,7 +101,7 @@ async function getOpenAIResponse(prompt: string): Promise<string> {
   
   try {
     const completion = await getOpenAIClient().chat.completions.create({
-      model: 'gpt-3.5-turbo-0125',
+      model: 'o4-mini-2025-04-16',
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
         { role: 'user', content: prompt }
