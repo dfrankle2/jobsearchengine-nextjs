@@ -36,7 +36,7 @@ export async function searchJobsByQuery(query: string, numResults: number = 10):
 
   return jobSearch.results.map(result => ({
     url: result.url,
-    title: result.title,
+    title: result.title || 'Untitled Job',
     content: result.text || '',
     score: undefined
   }));
@@ -63,7 +63,7 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 5): P
 
     return similarJobs.results.map(result => ({
       url: result.url,
-      title: result.title,
+      title: result.title || 'Untitled Job',
       content: result.text || '',
       score: undefined
     }));

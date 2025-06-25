@@ -21,6 +21,7 @@ export interface Job {
   score: number;
   createdAt: Date;
   updatedAt: Date;
+  savedJob?: SavedJob | null;
 }
 
 export interface Search {
