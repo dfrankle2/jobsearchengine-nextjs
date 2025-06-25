@@ -124,26 +124,7 @@ export async function searchJobsByQuery(query: string, numResults: number = 25):
             'metacareers.com',
             'careers.salesforce.com'
           ],
-          // Exclude non-job content
-          excludeDomains: [
-            'medium.com',
-            'wordpress.com', 
-            'blogger.com',
-            'reddit.com',
-            'quora.com',
-            'facebook.com',
-            'twitter.com',
-            'instagram.com',
-            'youtube.com',
-            'wikipedia.org',
-            'news.ycombinator.com',
-            'techcrunch.com',
-            'forbes.com',
-            'businessinsider.com',
-            'cnbc.com',
-            'wsj.com',
-            'nytimes.com'
-          ],
+          // Note: Cannot use excludeDomains when getting content
           // Focus on job-related content
           includeText: ["apply now hiring"],
           
