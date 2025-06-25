@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Search {
+  id              String    @id @default(cuid())
+  query           String
+  location        String?
+  jobType         String?
+  experienceLevel String?
+  salary          String?
+  technologies    String?
+  companySize     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  jobs            Job[]
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  title           String
+  url             String    @unique
+  company         String
+  location        String
+  salary          String?
+  experienceLevel String?
+  jobType         String?
+  skills          String?
+  content         String
+  score           Int       @default(0)
+  searchId        String
+  search          Search    @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  savedJob        SavedJob?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([searchId])
+  @@index([score])
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  jobId     String   @unique
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  notes     String?
+  status    String   @default("interested") // interested, applied, interviewing, rejected, offer
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
