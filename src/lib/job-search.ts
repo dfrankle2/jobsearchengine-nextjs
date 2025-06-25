@@ -2,8 +2,29 @@ import Exa from 'exa-js';
 import OpenAI from 'openai';
 import { UserPreferences } from '@/types';
 
-const exa = new Exa(process.env.EXA_API_KEY!);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+// Lazy load API clients to avoid initialization during build
+let exa: Exa | null = null;
+let openai: OpenAI | null = null;
+
+function getExaClient(): Exa {
+  if (!exa) {
+    if (!process.env.EXA_API_KEY) {
+      throw new Error('EXA_API_KEY environment variable is not set');
+    }
+    exa = new Exa(process.env.EXA_API_KEY);
+  }
+  return exa;
+}
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 interface JobSearchResult {
   url: string;
@@ -19,7 +40,7 @@ export async function searchJobsByQuery(query: string, numResults: number = 10):
 
   const searchQuery = `"${query}" "apply now" OR "apply today" job opening position`;
   
-  const jobSearch = await exa.searchAndContents(searchQuery, {
+  const jobSearch = await getExaClient().searchAndContents(searchQuery, {
     type: 'neural',
     numResults,
     text: { includeHtmlTags: false },
@@ -48,7 +69,7 @@ export async function findSimilarJobs(jobUrl: string, numResults: number = 5): P
   startDate.setDate(startDate.getDate() - 30);
 
   try {
-    const similarJobs = await exa.findSimilarAndContents(jobUrl, {
+    const similarJobs = await getExaClient().findSimilarAndContents(jobUrl, {
       numResults,
       text: { includeHtmlTags: false },
       includeDomains: [
@@ -77,7 +98,7 @@ async function getOpenAIResponse(prompt: string): Promise<string> {
   if (!prompt) return '';
   
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: 'gpt-3.5-turbo-0125',
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
