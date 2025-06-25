@@ -38,40 +38,59 @@ interface JobSearchResult {
 export async function searchJobsByQuery(query: string, numResults: number = 25): Promise<JobSearchResult[]> {
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30);
+  startDate.setDate(startDate.getDate() - 7); // Focus on very recent jobs
 
   try {
     // Use auto type for intelligent routing between neural and keyword search
     const jobSearch = await getExaClient().searchAndContents(query, {
-    type: 'auto', // Let Exa decide between neural and keyword
-    numResults,
-    text: { 
-      includeHtmlTags: false,
-      maxCharacters: 4000 // Optimize content extraction
-    },
-    highlights: {
-      query: 'requirements qualifications responsibilities salary benefits',
-      numSentences: 3
-    },
-    includeDomains: [
-      // Major job boards
-      'linkedin.com', 'indeed.com', 'glassdoor.com', 'monster.com',
-      'dice.com', 'ziprecruiter.com', 'careerbuilder.com',
-      // Specialized platforms
-      'stackoverflow.com', 'angel.co', 'wellfound.com',
-      'remote.co', 'flexjobs.com',
-      // ATS platforms
-      'lever.co', 'greenhouse.io', 'workable.com',
-      'icims.com', 'myworkdayjobs.com'
-    ],
-    // Note: Cannot use excludeDomains when getting content
-    startPublishedDate: startDate.toISOString(),
-    endPublishedDate: endDate.toISOString(),
-    excludeText: ['position has been filled'], // Only 1 phrase allowed
-    useAutoprompt: true // Optimize query automatically
-  });
+      type: 'auto', // Let Exa decide between neural and keyword
+      numResults: Math.min(numResults, 100), // Exa limit
+      text: { 
+        includeHtmlTags: false,
+        maxCharacters: 5000 // Increased for better content
+      },
+      highlights: {
+        query: 'requirements qualifications experience skills salary remote hybrid benefits',
+        numSentences: 5 // More context
+      },
+      includeDomains: [
+        // Direct company career pages
+        'careers.google.com', 'amazon.jobs', 'careers.microsoft.com',
+        'jobs.apple.com', 'careers.meta.com', 'careers.netflix.com',
+        
+        // Major job boards
+        'linkedin.com/jobs', 'indeed.com', 'glassdoor.com',
+        'dice.com', 'ziprecruiter.com', 'monster.com',
+        
+        // Tech-focused
+        'jobs.stackoverflow.com', 'angel.co', 'wellfound.com',
+        'hired.com', 'triplebyte.com', 'otta.com',
+        
+        // Remote-specific
+        'remote.co', 'remoteok.io', 'weworkremotely.com',
+        'flexjobs.com', 'remotejobs.com',
+        
+        // ATS platforms
+        'lever.co', 'greenhouse.io', 'workable.com',
+        'ashbyhq.com', 'jobs.smartrecruiters.com',
+        'myworkdayjobs.com', 'icims.com', 'taleo.net'
+      ],
+      startPublishedDate: startDate.toISOString(),
+      endPublishedDate: endDate.toISOString(),
+      excludeText: 'This position has been filled', // More specific
+      useAutoprompt: true, // Optimize query automatically
+      category: 'job listing' // Help Exa understand context
+    });
 
-    return jobSearch.results.map(result => ({
+    // Filter out likely filled positions
+    const activeJobs = jobSearch.results.filter(result => {
+      const text = (result.text || '').toLowerCase();
+      return !text.includes('position has been filled') &&
+             !text.includes('no longer accepting') &&
+             !text.includes('applications closed');
+    });
+
+    return activeJobs.map(result => ({
       url: result.url,
       title: result.title || 'Untitled Job',
       content: result.text || '',

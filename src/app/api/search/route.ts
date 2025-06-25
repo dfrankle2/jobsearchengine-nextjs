@@ -5,14 +5,28 @@ import { SearchFormData } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check required environment variables
+    const missingVars = [];
+    if (!process.env.EXA_API_KEY) missingVars.push('EXA_API_KEY');
+    if (!process.env.OPENAI_API_KEY) missingVars.push('OPENAI_API_KEY');
+    if (!process.env.DATABASE_URL) missingVars.push('DATABASE_URL');
+    
+    if (missingVars.length > 0) {
+      return NextResponse.json(
+        { error: `Missing environment variables: ${missingVars.join(', ')}` },
+        { status: 500 }
+      );
+    }
+    
     const body: SearchFormData = await request.json();
     
-    // Log environment variables status (without exposing values)
-    console.log('Environment check:', {
-      hasExa: !!process.env.EXA_API_KEY,
-      hasOpenAI: !!process.env.OPENAI_API_KEY,
-      hasDB: !!process.env.DATABASE_URL,
-    });
+    // Validate input
+    if (!body.query || body.query.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Search query is required' },
+        { status: 400 }
+      );
+    }
     const { 
       query, 
       location, 
@@ -48,36 +62,74 @@ export async function POST(request: NextRequest) {
       searchQuery += ` ${technologies}`;
     }
     
-    // Search for jobs
+    // Search for jobs with error handling
     console.log(`🔍 Searching for: ${searchQuery}`);
-    const jobs = await searchJobsByQuery(searchQuery, numResults);
-    console.log(`Found ${jobs.length} initial job postings`);
+    let jobs;
+    try {
+      jobs = await searchJobsByQuery(searchQuery, numResults);
+      console.log(`Found ${jobs.length} initial job postings`);
+    } catch (searchError) {
+      console.error('Job search failed:', searchError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to search jobs', 
+          details: searchError instanceof Error ? searchError.message : 'Unknown error',
+          tip: 'Try a more specific search query or check your API keys'
+        },
+        { status: 500 }
+      );
+    }
 
-    // Create search record
-    const search = await prisma.search.create({
-      data: {
-        query,
-        location,
-        jobType,
-        experienceLevel,
-        salary,
-        technologies,
-        companySize
-      }
-    });
+    // Create search record with error handling
+    let search;
+    try {
+      search = await prisma.search.create({
+        data: {
+          query,
+          location,
+          jobType,
+          experienceLevel,
+          salary,
+          technologies,
+          companySize
+        }
+      });
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to save search', 
+          details: 'Database connection error',
+          tip: 'Please check your database connection'
+        },
+        { status: 500 }
+      );
+    }
 
     // Enrich job data with AI
     console.log('📊 Analyzing job postings...');
     const enrichedJobs = [];
     const userPreferences = { location, jobType, experienceLevel, salary, technologies, companySize };
     
-    for (const job of jobs) {
-      try {
-        const enrichedJob = await enrichJobData(job, userPreferences);
-        enrichedJobs.push(enrichedJob);
-      } catch (error) {
-        console.error('Error processing job:', error);
-        continue;
+    // Process in batches to avoid rate limits
+    const batchSize = 5;
+    for (let i = 0; i < jobs.length; i += batchSize) {
+      const batch = jobs.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (job) => {
+        try {
+          return await enrichJobData(job, userPreferences);
+        } catch (error) {
+          console.error('Error processing job:', error);
+          // Return job with default score on error
+          return { ...job, score: 5, company: 'Unknown', location: 'Unknown' };
+        }
+      });
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled' && result.value) {
+          enrichedJobs.push(result.value);
+        }
       }
     }
 
@@ -144,17 +196,37 @@ export async function POST(request: NextRequest) {
     
     // Provide more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorDetails = {
-      error: 'Failed to search jobs',
-      message: errorMessage,
-      // Include environment status for debugging
-      env: {
-        hasExa: !!process.env.EXA_API_KEY,
-        hasOpenAI: !!process.env.OPENAI_API_KEY,
-        hasDB: !!process.env.DATABASE_URL,
-      }
-    };
     
-    return NextResponse.json(errorDetails, { status: 500 });
+    // Check for specific error types
+    if (errorMessage.includes('API key')) {
+      return NextResponse.json(
+        { 
+          error: 'API Configuration Error',
+          message: 'Please check your API keys in environment variables',
+          tip: 'Ensure EXA_API_KEY and OPENAI_API_KEY are properly set'
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (errorMessage.includes('rate limit')) {
+      return NextResponse.json(
+        { 
+          error: 'Rate Limit Exceeded',
+          message: 'Too many requests. Please wait a moment and try again.',
+          tip: 'Try searching with fewer results or wait 60 seconds'
+        },
+        { status: 429 }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        error: 'Search Failed',
+        message: errorMessage,
+        tip: 'Try a simpler search query or contact support if the issue persists'
+      },
+      { status: 500 }
+    );
   }
 }
