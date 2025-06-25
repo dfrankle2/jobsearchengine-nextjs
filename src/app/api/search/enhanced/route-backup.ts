@@ -5,8 +5,6 @@ import { SearchFormData } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Enhanced search API called');
-    
     // Validate environment variables
     const missingVars = [];
     if (!process.env.EXA_API_KEY) missingVars.push('EXA_API_KEY');
@@ -14,7 +12,6 @@ export async function POST(request: NextRequest) {
     if (!process.env.DATABASE_URL) missingVars.push('DATABASE_URL');
     
     if (missingVars.length > 0) {
-      console.error('❌ Missing environment variables:', missingVars);
       return NextResponse.json(
         { error: `Missing environment variables: ${missingVars.join(', ')}` },
         { status: 500 }
@@ -22,7 +19,6 @@ export async function POST(request: NextRequest) {
     }
     
     const body: SearchFormData = await request.json();
-    console.log('📝 Search request:', { query: body.query, location: body.location });
     
     if (!body.query || body.query.trim().length === 0) {
       return NextResponse.json(
@@ -39,10 +35,12 @@ export async function POST(request: NextRequest) {
       salary, 
       technologies, 
       companySize,
-      numResults = 10, // Start smaller for testing
-      findSimilar = false // Disable for initial testing
+      numResults = 25,
+      findSimilar = true 
     } = body;
 
+    console.log(`🚀 Enhanced search initiated for: "${query}"`);
+    
     // Build user preferences
     const preferences = {
       location,
@@ -53,58 +51,79 @@ export async function POST(request: NextRequest) {
       companySize
     };
 
-    console.log('🔍 Starting enhanced job search...');
+    // Create search record
+    const search = await prisma.search.create({
+      data: {
+        query,
+        location,
+        jobType,
+        experienceLevel,
+        salary,
+        technologies,
+        companySize
+      }
+    });
 
-    // Execute enhanced search with detailed logging
+    console.log(`📝 Search record created: ${search.id}`);
+
+    // Execute enhanced search
     let enhancedJobs;
     try {
       enhancedJobs = await enhancedJobSearch(query, preferences, numResults);
       console.log(`✅ Enhanced search completed: ${enhancedJobs.length} jobs found`);
-      
-      if (enhancedJobs.length === 0) {
-        console.log('❌ No jobs found in enhanced search');
-      }
     } catch (searchError) {
-      console.error('❌ Enhanced search failed:', searchError);
+      console.error('Enhanced search failed:', searchError);
       return NextResponse.json(
         { 
           error: 'Enhanced search failed', 
           details: searchError instanceof Error ? searchError.message : 'Unknown error',
-          tip: 'Check your EXA API key and try again with a simpler query'
+          tip: 'Try a more specific search query or check your API keys'
         },
         { status: 500 }
       );
     }
 
-    // Create search record
-    let search;
-    try {
-      search = await prisma.search.create({
-        data: {
-          query,
-          location,
-          jobType,
-          experienceLevel,
-          salary,
-          technologies,
-          companySize
+    // Find similar jobs for top matches if requested
+    let allJobs = enhancedJobs;
+    if (findSimilar && enhancedJobs.length > 0) {
+      console.log('🔗 Finding similar jobs to top matches...');
+      
+      const topJobs = enhancedJobs.filter(job => job.score >= 8);
+      
+      if (topJobs.length > 0) {
+        try {
+          const similarJobsPromises = topJobs.slice(0, 3).map(job => 
+            findSimilarJobsEnhanced(job.url, preferences, 5)
+          );
+          
+          const similarJobsResults = await Promise.allSettled(similarJobsPromises);
+          const similarJobs = similarJobsResults
+            .filter(result => result.status === 'fulfilled')
+            .flatMap(result => result.value);
+          
+          // Add similar jobs that aren't already in results
+          for (const similarJob of similarJobs) {
+            if (!allJobs.find(j => j.url === similarJob.url)) {
+              allJobs.push(similarJob);
+            }
+          }
+          
+          console.log(`🔗 Added ${similarJobs.length} similar jobs`);
+        } catch (similarError) {
+          console.error('Similar jobs search failed:', similarError);
+          // Continue without similar jobs
         }
-      });
-      console.log(`📝 Search record created: ${search.id}`);
-    } catch (dbError) {
-      console.error('❌ Database error:', dbError);
-      // Continue without saving to database for now
-      search = { id: 'temp-id' };
+      }
     }
 
-    // For now, skip similar jobs to simplify testing
-    let allJobs = enhancedJobs;
+    // Sort by score and limit results
+    allJobs.sort((a, b) => b.score - a.score);
+    const finalJobs = allJobs.slice(0, numResults);
 
-    // Save jobs to database (with error handling)
-    const savedJobs = [];
-    for (const job of allJobs) {
-      try {
-        const savedJob = await prisma.job.create({
+    // Save jobs to database with enhanced fields
+    const savedJobs = await Promise.all(
+      finalJobs.map(job => 
+        prisma.job.create({
           data: {
             title: job.title,
             url: job.url,
@@ -118,34 +137,14 @@ export async function POST(request: NextRequest) {
             score: Math.round(job.score),
             searchId: search.id
           }
-        });
-        savedJobs.push(savedJob);
-      } catch (saveError) {
-        console.error('Error saving job:', saveError);
-        // Add job without saving to database
-        savedJobs.push({
-          id: `temp-${Date.now()}-${Math.random()}`,
-          title: job.title,
-          url: job.url,
-          company: job.company,
-          location: job.location,
-          salary: job.salary || 'Not specified',
-          experienceLevel: job.experienceLevel || 'Not specified',
-          jobType: job.jobType || 'Not specified',
-          skills: job.skills || '',
-          content: job.content,
-          score: Math.round(job.score),
-          searchId: search.id,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-      }
-    }
+        })
+      )
+    );
 
-    console.log(`💾 Processed ${savedJobs.length} jobs`);
+    // Generate search insights
+    const insights = generateSearchInsights(finalJobs, preferences);
 
-    // Generate simple insights
-    const insights = generateSimpleInsights(savedJobs, preferences);
+    console.log(`💾 Saved ${savedJobs.length} jobs to database`);
 
     return NextResponse.json({
       searchId: search.id,
@@ -153,37 +152,58 @@ export async function POST(request: NextRequest) {
       totalFound: savedJobs.length,
       insights,
       searchMetrics: {
-        averageScore: savedJobs.length > 0 
-          ? Number((savedJobs.reduce((acc, j) => acc + j.score, 0) / savedJobs.length).toFixed(1))
-          : 0,
-        perfectMatches: savedJobs.filter(j => j.score >= 9).length,
-        greatMatches: savedJobs.filter(j => j.score >= 7 && j.score < 9).length,
-        remoteJobs: savedJobs.filter(j => 
-          j.location?.toLowerCase().includes('remote')
+        averageScore: Number((finalJobs.reduce((acc, j) => acc + j.score, 0) / finalJobs.length).toFixed(1)),
+        perfectMatches: finalJobs.filter(j => j.score >= 9).length,
+        greatMatches: finalJobs.filter(j => j.score >= 7 && j.score < 9).length,
+        remoteJobs: finalJobs.filter(j => 
+          j.location?.toLowerCase().includes('remote') || 
+          j.remotePolicy?.toLowerCase().includes('remote')
         ).length,
-        companiesFound: new Set(savedJobs.map(j => j.company)).size
+        companiesFound: new Set(finalJobs.map(j => j.company)).size
       }
     });
 
   } catch (error) {
-    console.error('🔥 Unexpected error in enhanced search:', error);
+    console.error('Enhanced search error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
+    if (errorMessage.includes('API key')) {
+      return NextResponse.json(
+        { 
+          error: 'API Configuration Error',
+          message: 'Please check your API keys in environment variables',
+          tip: 'Ensure EXA_API_KEY and OPENAI_API_KEY are properly set'
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (errorMessage.includes('rate limit')) {
+      return NextResponse.json(
+        { 
+          error: 'Rate Limit Exceeded',
+          message: 'Too many requests. Please wait a moment and try again.',
+          tip: 'Try searching with fewer results or wait 60 seconds'
+        },
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
       { 
-        error: 'Search Failed',
+        error: 'Enhanced Search Failed',
         message: errorMessage,
-        tip: 'Try using the standard search or check console logs for details'
+        tip: 'Try a simpler search query or contact support if the issue persists'
       },
       { status: 500 }
     );
   }
 }
 
-// Simplified insights generation
-function generateSimpleInsights(jobs: any[], preferences: any) {
-  return {
+// Generate insights about the search results
+function generateSearchInsights(jobs: any[], preferences: any) {
+  const insights = {
     topCompanies: getTopCompanies(jobs),
     salaryRange: getSalaryInsights(jobs),
     locationDistribution: getLocationDistribution(jobs),
@@ -192,6 +212,8 @@ function generateSimpleInsights(jobs: any[], preferences: any) {
     remoteOpportunities: getRemoteInsights(jobs),
     recommendations: generateRecommendations(jobs, preferences)
   };
+
+  return insights;
 }
 
 function getTopCompanies(jobs: any[]) {
@@ -271,20 +293,21 @@ function getExperienceLevelDistribution(jobs: any[]) {
 
 function getRemoteInsights(jobs: any[]) {
   const remoteJobs = jobs.filter(job => 
-    job.location?.toLowerCase().includes('remote')
+    job.location?.toLowerCase().includes('remote') ||
+    job.remotePolicy?.toLowerCase().includes('remote') ||
+    job.content?.toLowerCase().includes('remote work')
   );
 
   const hybridJobs = jobs.filter(job => 
-    job.location?.toLowerCase().includes('hybrid')
+    job.location?.toLowerCase().includes('hybrid') ||
+    job.remotePolicy?.toLowerCase().includes('hybrid')
   );
 
   return {
     fullyRemote: remoteJobs.length,
     hybrid: hybridJobs.length,
     onSite: jobs.length - remoteJobs.length - hybridJobs.length,
-    remotePercentage: jobs.length > 0 
-      ? Math.round((remoteJobs.length / jobs.length) * 100)
-      : 0
+    remotePercentage: Math.round((remoteJobs.length / jobs.length) * 100)
   };
 }
 
@@ -292,21 +315,12 @@ function generateRecommendations(jobs: any[], preferences: any) {
   const recommendations = [];
 
   // Score-based recommendations
-  if (jobs.length > 0) {
-    const avgScore = jobs.reduce((acc, j) => acc + j.score, 0) / jobs.length;
-    if (avgScore < 6) {
-      recommendations.push({
-        type: 'query',
-        message: 'Try broadening your search terms or removing some filters for more results'
-      });
-    }
-
-    if (jobs.length < 5) {
-      recommendations.push({
-        type: 'results',
-        message: 'Consider expanding your search criteria to find more opportunities'
-      });
-    }
+  const avgScore = jobs.reduce((acc, j) => acc + j.score, 0) / jobs.length;
+  if (avgScore < 6) {
+    recommendations.push({
+      type: 'query',
+      message: 'Consider broadening your search terms for more relevant results'
+    });
   }
 
   // Location recommendations
@@ -315,9 +329,18 @@ function generateRecommendations(jobs: any[], preferences: any) {
     if (remoteJobs.length > jobs.length * 0.3) {
       recommendations.push({
         type: 'location',
-        message: 'Many remote opportunities available - consider including remote positions'
+        message: 'Many remote opportunities available - consider adding "Remote" to your location preferences'
       });
     }
+  }
+
+  // Salary recommendations
+  const jobsWithSalary = jobs.filter(j => j.salary && j.salary !== 'Not specified');
+  if (jobsWithSalary.length < jobs.length * 0.5) {
+    recommendations.push({
+      type: 'salary',
+      message: 'Many jobs don\'t list salary - consider reaching out directly or checking company websites'
+    });
   }
 
   return recommendations;
