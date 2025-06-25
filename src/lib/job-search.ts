@@ -38,115 +38,227 @@ interface JobSearchResult {
 export async function searchJobsByQuery(query: string, numResults: number = 25): Promise<JobSearchResult[]> {
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 7); // Focus on very recent jobs
-
-  try {
-    // Use auto type for intelligent routing between neural and keyword search
-    const jobSearch = await getExaClient().searchAndContents(query, {
-      type: 'auto', // Let Exa decide between neural and keyword
-      numResults: Math.min(numResults, 100), // Exa limit
-      text: { 
-        includeHtmlTags: false,
-        maxCharacters: 5000 // Increased for better content
-      },
-      highlights: {
-        query: 'requirements qualifications experience skills salary remote hybrid benefits',
-        numSentences: 5 // More context
-      },
-      includeDomains: [
-        // Major job boards (base domains only)
-        'linkedin.com', 'indeed.com', 'glassdoor.com',
-        'dice.com', 'ziprecruiter.com', 'monster.com',
-        'careerbuilder.com', 'simplyhired.com',
-        
-        // Tech-focused (base domains)
-        'stackoverflow.com', 'angel.co', 'wellfound.com',
-        'hired.com', 'triplebyte.com', 'otta.com',
-        
-        // Remote-specific
-        'remote.co', 'remoteok.io', 'weworkremotely.com',
-        'flexjobs.com', 'remotejobs.com',
-        
-        // ATS platforms
-        'lever.co', 'greenhouse.io', 'workable.com',
-        'ashbyhq.com', 'smartrecruiters.com',
-        'myworkdayjobs.com', 'icims.com', 'taleo.net',
-        
-        // Company career sites (base domains)
-        'google.com', 'amazon.jobs', 'microsoft.com',
-        'apple.com', 'meta.com', 'netflix.com'
-      ],
-      startPublishedDate: startDate.toISOString(),
-      endPublishedDate: endDate.toISOString(),
-      excludeText: ['This position has been filled'], // Limited to 1 phrase
-      useAutoprompt: true // Optimize query automatically
-    });
-
-    // Filter out likely filled positions
-    const activeJobs = jobSearch.results.filter(result => {
-      const text = (result.text || '').toLowerCase();
-      return !text.includes('position has been filled') &&
-             !text.includes('no longer accepting') &&
-             !text.includes('applications closed');
-    });
-
-    return activeJobs.map(result => ({
-      url: result.url,
-      title: result.title || 'Untitled Job',
-      content: result.text || '',
-      score: undefined
-    }));
-  } catch (error) {
-    console.error('Exa search error:', error);
-    throw new Error(`Failed to search jobs: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-export async function findSimilarJobs(jobUrl: string, numResults: number = 10): Promise<JobSearchResult[]> {
-  const endDate = new Date();
-  const startDate = new Date();
   startDate.setDate(startDate.getDate() - 30);
 
   try {
+    // Build multiple targeted search queries
+    const searchQueries = [
+      `"${query}" job opening apply now hiring`,
+      `"${query}" position career opportunity`,
+      `${query} jobs available hiring immediately`
+    ];
+
+    let allResults: JobSearchResult[] = [];
+
+    // Try multiple search strategies
+    for (const searchQuery of searchQueries.slice(0, 2)) {
+      try {
+        console.log(`Searching with query: ${searchQuery}`);
+        
+        const jobSearch = await getExaClient().searchAndContents(searchQuery, {
+          type: 'neural',
+          numResults: Math.ceil(numResults / 2),
+          text: { 
+            includeHtmlTags: false,
+            maxCharacters: 4000
+          },
+          highlights: {
+            query: 'job requirements qualifications responsibilities experience salary',
+            numSentences: 3,
+            highlightsPerUrl: 2
+          },
+          // CORRECTED: Use only base domains (no paths)
+          includeDomains: [
+            // Major job boards
+            'linkedin.com', 
+            'indeed.com',
+            'glassdoor.com',
+            'monster.com',
+            'dice.com',
+            'ziprecruiter.com',
+            'careerbuilder.com',
+            'simplyhired.com',
+            
+            // Tech-focused job boards
+            'stackoverflow.com',
+            'angel.co',
+            'wellfound.com',
+            'hired.com',
+            'otta.com',
+            
+            // Remote-specific
+            'remote.co',
+            'flexjobs.com',
+            'weworkremotely.com',
+            'remoteok.io',
+            
+            // ATS platforms
+            'lever.co',
+            'greenhouse.io',
+            'workable.com',
+            'ashbyhq.com',
+            'smartrecruiters.com',
+            'myworkdayjobs.com',
+            'icims.com',
+            'taleo.net',
+            
+            // Company career sites (base domains only)
+            'google.com',
+            'amazon.com',
+            'microsoft.com',
+            'apple.com',
+            'meta.com',
+            'netflix.com',
+            'salesforce.com',
+            'adobe.com',
+            'airbnb.com',
+            'uber.com',
+            'stripe.com',
+            'shopify.com'
+          ],
+          // Exclude non-job content domains
+          excludeDomains: [
+            'medium.com',
+            'wordpress.com', 
+            'blogger.com',
+            'reddit.com',
+            'quora.com',
+            'facebook.com',
+            'twitter.com',
+            'instagram.com',
+            'youtube.com',
+            'news.ycombinator.com',
+            'techcrunch.com',
+            'forbes.com',
+            'wikipedia.org'
+          ],
+          // CORRECTED: Only 1 string, up to 5 words for includeText
+          includeText: ["job apply position"],
+          
+          // CORRECTED: Only 1 string, up to 5 words for excludeText  
+          excludeText: ["expired filled closed"],
+          
+          startPublishedDate: startDate.toISOString(),
+          endPublishedDate: endDate.toISOString(),
+          useAutoprompt: true
+        });
+
+        console.log(`Found ${jobSearch.results.length} results for query: ${searchQuery}`);
+
+        const results = jobSearch.results
+          .filter(result => isValidJobPosting(result))
+          .map(result => ({
+            url: result.url,
+            title: result.title || 'Untitled Job',
+            content: result.text || '',
+            score: undefined
+          }));
+
+        allResults = allResults.concat(results);
+      } catch (error) {
+        console.error(`Search failed for query: ${searchQuery}`, error);
+      }
+    }
+
+    // Remove duplicates by URL
+    const uniqueResults = allResults.filter((job, index, self) => 
+      index === self.findIndex(j => j.url === job.url)
+    );
+
+    console.log(`Total unique results: ${uniqueResults.length}`);
+    return uniqueResults.slice(0, numResults);
+
+  } catch (error) {
+    console.error('Exa search error:', error);
+    return [];
+  }
+}
+
+// Helper function to validate if a result is actually a job posting
+function isValidJobPosting(result: any): boolean {
+  const title = (result.title || '').toLowerCase();
+  const content = (result.text || '').toLowerCase();
+  const url = (result.url || '').toLowerCase();
+
+  // Must contain job-related indicators
+  const jobIndicators = [
+    'job', 'position', 'role', 'career', 'hiring', 'employment', 
+    'opportunity', 'opening', 'vacancy', 'apply', 'candidate'
+  ];
+  
+  const hasJobIndicator = jobIndicators.some(indicator => 
+    title.includes(indicator) || content.includes(indicator) || url.includes(indicator)
+  );
+
+  // Must NOT be these types of pages
+  const excludePatterns = [
+    'company profile', 'about us', 'store location', 'contact',
+    'press', 'news', 'blog', 'article', 'podcast', 'watch',
+    'stream', 'netflix', 'apple store', 'store hours'
+  ];
+
+  const isExcluded = excludePatterns.some(pattern => 
+    title.includes(pattern) || content.includes(pattern)
+  );
+
+  // Must have substantial content (real job descriptions are detailed)
+  const hasSubstantialContent = content.length > 200;
+
+  // Check for job-specific content patterns
+  const jobContentPatterns = [
+    'responsibilities', 'requirements', 'qualifications', 'experience',
+    'skills', 'salary', 'benefits', 'full-time', 'part-time', 'remote'
+  ];
+
+  const hasJobContent = jobContentPatterns.some(pattern => 
+    content.includes(pattern)
+  );
+
+  return hasJobIndicator && !isExcluded && hasSubstantialContent && hasJobContent;
+}
+
+export async function findSimilarJobs(jobUrl: string, numResults: number = 10): Promise<JobSearchResult[]> {
+  try {
     const similarJobs = await getExaClient().findSimilarAndContents(jobUrl, {
       numResults,
-      excludeSourceDomain: true, // Avoid duplicate listings
+      excludeSourceDomain: true,
       text: { 
         includeHtmlTags: false,
         maxCharacters: 3000
       },
       highlights: {
-        query: 'job requirements qualifications',
-        numSentences: 3
+        query: 'job requirements qualifications experience',
+        numSentences: 2
       },
+      // Same focused domain list as search
       includeDomains: [
-        // Major job boards (base domains only)
-        'linkedin.com', 'indeed.com', 'glassdoor.com',
-        'dice.com', 'ziprecruiter.com', 'monster.com',
-        'careerbuilder.com', 'simplyhired.com',
-        
-        // Tech-focused
-        'stackoverflow.com', 'angel.co', 'wellfound.com',
-        
-        // Remote-specific
-        'remote.co', 'flexjobs.com',
-        
-        // ATS platforms
-        'lever.co', 'greenhouse.io', 'workable.com',
-        'icims.com', 'myworkdayjobs.com'
+        'linkedin.com', 
+        'indeed.com',
+        'glassdoor.com',
+        'monster.com',
+        'dice.com',
+        'ziprecruiter.com',
+        'careerbuilder.com',
+        'stackoverflow.com',
+        'angel.co',
+        'wellfound.com',
+        'lever.co',
+        'greenhouse.io',
+        'workable.com',
+        'icims.com'
       ],
-      // Note: Cannot use excludeDomains when getting content
-      startPublishedDate: startDate.toISOString(),
-      endPublishedDate: endDate.toISOString(),
-      excludeText: ['This position has been filled'] // Limited to 1 phrase
+      // CORRECTED: Only 1 string, up to 5 words
+      excludeText: ["expired filled"]
     });
 
-    return similarJobs.results.map(result => ({
-      url: result.url,
-      title: result.title || 'Untitled Job',
-      content: result.text || '',
-      score: undefined
-    }));
+    return similarJobs.results
+      .filter(result => isValidJobPosting(result))
+      .map(result => ({
+        url: result.url,
+        title: result.title || 'Untitled Job',
+        content: result.text || '',
+        score: undefined
+      }));
   } catch (error) {
     console.error('Error finding similar jobs:', error);
     return [];
